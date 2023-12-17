@@ -19,21 +19,28 @@ public class ConnectionScript : MonoBehaviour
     [SerializeField] Button connect;
     [SerializeField] Button map;
     [SerializeField] Button game;
+    [SerializeField] GameObject panel;
+
 
     void Start() {
+        panel.gameObject.SetActive(false);
         map.gameObject.SetActive(false);
         game.gameObject.SetActive(false);
     }
 
     void OnDestroy()
     {
-        if (tcpClient != null)
+        if (reader != null)
         {
-            tcpClient.Close();
+            reader.Close();
         }
         if (networkStream != null)
         {
             networkStream.Close();
+        }
+        if (tcpClient != null)
+        {
+            tcpClient.Close();
         }
     }
 
@@ -62,7 +69,7 @@ public class ConnectionScript : MonoBehaviour
             if (networkStream != null)
             {
                 //Send the request to the server
-                string mapRequest = "GET maps/list" + '\n';
+                string mapRequest = "GET maps/list\n";
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(mapRequest);
                 networkStream.Write(data, 0, data.Length);  
 
@@ -70,12 +77,13 @@ public class ConnectionScript : MonoBehaviour
                 if (networkStream != null && networkStream.DataAvailable) {
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
                     if (reader != null){
-                        jsonResponse = "";
+                        jsonResponse = null;
                         while (reader.Peek() > -1) {
-                            jsonResponse += reader.ReadLine();
-                            jsonResponse += "\n";
+                            jsonResponse += reader.ReadLine() + '\n';
                         }
                         reader = null;
+                        map.gameObject.SetActive(false);
+
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
                             Debug.Log(jsonResponse.ToString());
@@ -104,14 +112,14 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
-    //PROBLEME BOUCLE INFINI OBLIGE DE COUPER LE SERVEUR
+
     public void OnGame() {
         try
         {
             if (networkStream != null)
             {
                 //Send the request to the server
-                string mapRequest = "GET game/list" + '\n';
+                string mapRequest = "GET game/list\n";
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(mapRequest);
                 networkStream.Write(data, 0, data.Length);  
                 
@@ -119,19 +127,17 @@ public class ConnectionScript : MonoBehaviour
                 if (networkStream != null && networkStream.DataAvailable) {
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
                     if (reader != null){
-                        jsonResponse = "";
+                        jsonResponse = null;
+
                         while (reader.Peek() > -1) {
-                            jsonResponse += reader.ReadLine();
-                            jsonResponse += "\n";
+                            jsonResponse += reader.ReadLine() + '\n';
                         }
                         reader = null;
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
-                            Debug.Log("oui\n");
                             Debug.Log(jsonResponse.ToString());
                             
                             gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
-                            Debug.Log(gameList.action);
                             if (gameList != null && gameList.games != null) {
                                 foreach (Game game in gameList.games){
                                     Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
