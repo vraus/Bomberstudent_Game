@@ -69,6 +69,7 @@ public class ConnectionScript : MonoBehaviour
                 if (networkStream != null && networkStream.DataAvailable) {
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
                     if (reader != null){
+                        jsonResponse = "";
                         while (reader.Peek() > -1) {
                             jsonResponse += reader.ReadLine();
                             jsonResponse += "\n";
@@ -80,10 +81,7 @@ public class ConnectionScript : MonoBehaviour
                             
                             mapList = JsonUtility.FromJson<MapList>(jsonResponse); // access the data in 'mapList' object
                             if (mapList != null) {
-                                Debug.Log(mapList.maps);
-                                foreach (Map map in mapList.maps) //PROBLEME mapList.maps est Null donc bug
-                                {
-                                    Debug.Log("non");
+                                foreach (Map map in mapList.maps){
                                     Debug.Log($"Map ID: {map.id}, Width: {map.width}, Height: {map.height}, Content: {map.content}");
                                 }
                             }
