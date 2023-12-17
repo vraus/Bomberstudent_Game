@@ -14,6 +14,7 @@ public class ConnectionScript : MonoBehaviour
     private NetworkStream networkStream;
     private string jsonResponse;
     private MapList mapList;
+    private GameList gameList;
 
     [SerializeField] Button connect;
     [SerializeField] Button map;
@@ -74,13 +75,13 @@ public class ConnectionScript : MonoBehaviour
                             jsonResponse += reader.ReadLine();
                             jsonResponse += "\n";
                         }
+                        reader = null;
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
                             Debug.Log(jsonResponse.ToString());
-                            reader = null;
                             
                             mapList = JsonUtility.FromJson<MapList>(jsonResponse); // access the data in 'mapList' object
-                            if (mapList != null) {
+                            if (mapList != null && mapList.maps != null) {
                                 foreach (Map map in mapList.maps){
                                     Debug.Log($"Map ID: {map.id}, Width: {map.width}, Height: {map.height}, Content: {map.content}");
                                 }
@@ -103,7 +104,58 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
+    //PROBLEME BOUCLE INFINI OBLIGE DE COUPER LE SERVEUR
+    public void OnGame() {
+        try
+        {
+            if (networkStream != null)
+            {
+                //Send the request to the server
+                string mapRequest = "GET game/list" + '\n';
+                byte[] data = System.Text.Encoding.UTF8.GetBytes(mapRequest);
+                networkStream.Write(data, 0, data.Length);  
+                
+                System.Threading.Thread.Sleep(100); //sleep to wait the server answer
+                if (networkStream != null && networkStream.DataAvailable) {
+                    reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
+                    if (reader != null){
+                        jsonResponse = "";
+                        while (reader.Peek() > -1) {
+                            jsonResponse += reader.ReadLine();
+                            jsonResponse += "\n";
+                        }
+                        reader = null;
+                        if (!string.IsNullOrEmpty(jsonResponse))
+                        {
+                            Debug.Log("oui\n");
+                            Debug.Log(jsonResponse.ToString());
+                            
+                            gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
+                            Debug.Log(gameList.action);
+                            if (gameList != null && gameList.games != null) {
+                                foreach (Game game in gameList.games){
+                                    Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
+                                }
+                            }
+                            else{
+                                Debug.LogError("Failed to deserialize JSON into MapList object.");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("NetworkStream is not initialized.");
+            } 
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Error sending message!" + e.Message);
+        }
+    }
 
+ 
 
     public NetworkStream GetNetworkStream()
     {
