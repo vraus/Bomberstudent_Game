@@ -17,15 +17,16 @@ public class ConnectionScript : MonoBehaviour
     private GameList gameList;
 
     [SerializeField] Button connect;
-    [SerializeField] Button map;
-    [SerializeField] Button game;
-    [SerializeField] GameObject panel;
+
+    [SerializeField] GameObject pnlMapList;
+    [SerializeField] GameObject pnlGamesList;
+    [SerializeField] GameObject pnlJoinStart;
 
 
     void Start() {
-        panel.gameObject.SetActive(false);
-        map.gameObject.SetActive(false);
-        game.gameObject.SetActive(false);
+        pnlMapList.gameObject.SetActive(false);
+        pnlGamesList.gameObject.SetActive(false);
+        pnlJoinStart.gameObject.SetActive(false);
     }
 
     void OnDestroy()
@@ -52,9 +53,13 @@ public class ConnectionScript : MonoBehaviour
             networkStream = tcpClient.GetStream();
 
             Debug.Log("Connected to the server!");
-            connect.gameObject.SetActive(false);
-            map.gameObject.SetActive(true);
-            game.gameObject.SetActive(true);
+            connect.gameObject.SetActive(false); 
+            pnlMapList.gameObject.SetActive(false);
+            pnlGamesList.gameObject.SetActive(false);
+            pnlJoinStart.gameObject.SetActive(false);
+
+            OnMap();
+            OnGame();
         }
         catch (Exception e)
         {
@@ -82,7 +87,7 @@ public class ConnectionScript : MonoBehaviour
                             jsonResponse += reader.ReadLine() + '\n';
                         }
                         reader = null;
-                        map.gameObject.SetActive(false);
+                        pnlMapList.gameObject.SetActive(true);
 
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
@@ -128,6 +133,7 @@ public class ConnectionScript : MonoBehaviour
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
                     if (reader != null){
                         jsonResponse = null;
+                        pnlGamesList.gameObject.SetActive(true);
 
                         while (reader.Peek() > -1) {
                             jsonResponse += reader.ReadLine() + '\n';
