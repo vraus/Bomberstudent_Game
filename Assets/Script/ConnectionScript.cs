@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 public class ConnectionScript : MonoBehaviour
 {
@@ -18,6 +19,9 @@ public class ConnectionScript : MonoBehaviour
 
     [SerializeField] Button connect;
 
+
+    [Header("List Elements")]
+    public GameObject entryPrefab;
     [SerializeField] GameObject pnlMapList;
     [SerializeField] GameObject pnlGamesList;
     [SerializeField] GameObject pnlJoinStart;
@@ -31,18 +35,9 @@ public class ConnectionScript : MonoBehaviour
 
     void OnDestroy()
     {
-        if (reader != null)
-        {
-            reader.Close();
-        }
-        if (networkStream != null)
-        {
-            networkStream.Close();
-        }
-        if (tcpClient != null)
-        {
-            tcpClient.Close();
-        }
+        if (reader != null) reader.Close();
+        if (networkStream != null) networkStream.Close();
+        if (tcpClient != null) tcpClient.Close();
     }
 
     public void OnConnect()
@@ -53,7 +48,7 @@ public class ConnectionScript : MonoBehaviour
             networkStream = tcpClient.GetStream();
 
             Debug.Log("Connected to the server!");
-            connect.gameObject.SetActive(false); 
+            connect.gameObject.SetActive(false);
             pnlMapList.gameObject.SetActive(false);
             pnlGamesList.gameObject.SetActive(false);
             pnlJoinStart.gameObject.SetActive(false);
@@ -76,12 +71,12 @@ public class ConnectionScript : MonoBehaviour
                 //Send the request to the server
                 string mapRequest = "GET maps/list\n";
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(mapRequest);
-                networkStream.Write(data, 0, data.Length);  
+                networkStream.Write(data, 0, data.Length);
 
                 System.Threading.Thread.Sleep(100); //sleep to wait the server answer
                 if (networkStream != null && networkStream.DataAvailable) {
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
-                    if (reader != null){
+                    if (reader != null) {
                         jsonResponse = null;
                         while (reader.Peek() > -1) {
                             jsonResponse += reader.ReadLine() + '\n';
@@ -92,14 +87,21 @@ public class ConnectionScript : MonoBehaviour
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
                             Debug.Log(jsonResponse.ToString());
-                            
+
                             mapList = JsonUtility.FromJson<MapList>(jsonResponse); // access the data in 'mapList' object
                             if (mapList != null && mapList.maps != null) {
-                                foreach (Map map in mapList.maps){
+                                foreach (Map map in mapList.maps) {
                                     Debug.Log($"Map ID: {map.id}, Width: {map.width}, Height: {map.height}, Content: {map.content}");
+                                    GameObject entry = Instantiate(entryPrefab, pnlMapList.transform);
+                                    TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
+                                    nameEntry.text = "Id:" + map.id;
+                                    TextMeshProUGUI nbPlayer = entry.transform.Find("EntryNbPlayers").GetComponent<TextMeshProUGUI>();
+                                    nbPlayer.text = "";
+                                    TextMeshProUGUI button = entry.transform.Find("BtnJoinCreate").GetComponentInChildren<TextMeshProUGUI>();
+                                    button.GetComponent<TextMeshProUGUI>().text = "Create from map";
                                 }
                             }
-                            else{
+                            else {
                                 Debug.LogError("Failed to deserialize JSON into MapList object.");
                             }
                         }
@@ -107,9 +109,7 @@ public class ConnectionScript : MonoBehaviour
                 }
             }
             else
-            {
                 Debug.LogError("NetworkStream is not initialized.");
-            } 
         }
         catch (Exception e)
         {
@@ -126,12 +126,12 @@ public class ConnectionScript : MonoBehaviour
                 //Send the request to the server
                 string mapRequest = "GET game/list\n";
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(mapRequest);
-                networkStream.Write(data, 0, data.Length);  
-                
+                networkStream.Write(data, 0, data.Length);
+
                 System.Threading.Thread.Sleep(100); //sleep to wait the server answer
                 if (networkStream != null && networkStream.DataAvailable) {
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
-                    if (reader != null){
+                    if (reader != null) {
                         jsonResponse = null;
                         pnlGamesList.gameObject.SetActive(true);
 
@@ -142,14 +142,22 @@ public class ConnectionScript : MonoBehaviour
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
                             Debug.Log(jsonResponse.ToString());
-                            
+
                             gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
                             if (gameList != null && gameList.games != null) {
-                                foreach (Game game in gameList.games){
+                                foreach (Game game in gameList.games) {
                                     Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
+                                    GameObject entry = Instantiate(entryPrefab, pnlMapList.transform);
+                                    TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
+                                    nameEntry.text = "Id:" + game.name;
+                                    TextMeshProUGUI nbPlayer = entry.transform.Find("EntryNbPlayers").GetComponent<TextMeshProUGUI>();
+                                    nbPlayer.text = game.nbPlayer + "/4";
+                                    entry.AddComponent<TextMeshProUGUI>().text = "Map: " + game.mapId;
+                                    TextMeshProUGUI button = entry.transform.Find("BtnJoinCreate").GetComponentInChildren<TextMeshProUGUI>();
+                                    button.GetComponent<TextMeshProUGUI>().text = "Join";
                                 }
                             }
-                            else{
+                            else {
                                 Debug.LogError("Failed to deserialize JSON into MapList object.");
                             }
                         }
@@ -157,9 +165,7 @@ public class ConnectionScript : MonoBehaviour
                 }
             }
             else
-            {
                 Debug.LogError("NetworkStream is not initialized.");
-            } 
         }
         catch (Exception e)
         {
@@ -167,10 +173,7 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
- 
 
-    public NetworkStream GetNetworkStream()
-    {
-        return networkStream;
-    }
+
+    public NetworkStream GetNetworkStream() { return networkStream; }
 }
