@@ -17,6 +17,7 @@ public class ConnectionScript : MonoBehaviour
     private string jsonResponse;
     private MapList mapList;
     private GameList gameList;
+    private GameData gameData;
 
     [SerializeField] Button connect;
 
@@ -181,8 +182,6 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
-    public NetworkStream GetNetworkStream() { return networkStream; }
-
     public void OnButtonClick(bool isJoin, string gameName, int mapId)
     {
         if(isJoin)
@@ -205,17 +204,61 @@ public class ConnectionScript : MonoBehaviour
         }
     }
     
+
     public void OnButtonClickCreate(string gameName, int mapId)
     {
-        Debug.Log(gameName + " " + mapId);
-        string gameCreateRequest = "POST game/create {\"name\":\"" + gameName + "\", \"mapId\":" + mapId + "}";
-        Debug.Log(gameCreateRequest);
-        byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
-        networkStream.Write(data, 0, data.Length);
+        try
+        {
+            if (networkStream != null)
+            {
+                Debug.Log(gameName + " " + mapId);
+                string gameCreateRequest = "POST game/create {\"name\":\"" + gameName + "\", \"mapId\":" + mapId + "}";
+                Debug.Log(gameCreateRequest);
+                byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
+                networkStream.Write(data, 0, data.Length);
 
-        System.Threading.Thread.Sleep(100); //sleep to wait the server answer
+                pnlCreate.SetActive(false);
+                pnlJoin.SetActive(true);
+                System.Threading.Thread.Sleep(100); //sleep to wait the server answer
+                if (networkStream != null && networkStream.DataAvailable) {
+                    reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
+                    if (reader != null) {
+                        jsonResponse = null;
+                        while (reader.Peek() > -1)
+                        {
+                            jsonResponse += reader.ReadLine() + '\n';
+                        }
+                        reader = null;
+                        if (!string.IsNullOrEmpty(jsonResponse))
+                        {
+                            Debug.Log(jsonResponse.ToString());
 
-        pnlCreate.SetActive(false);
-        pnlJoin.SetActive(true);
+                            gameData = JsonUtility.FromJson<GameData>(jsonResponse); // access the data in 'mapList' object
+                            if (gameData != null && gameData.players != null && gameData.player != null) {
+                                foreach (PlayerData playerData in gameData.players) {
+                                    Debug.Log($"ID: {playerData.id}, pos: {playerData.pos}");
+                                }
+                                Debug.Log($"life: {gameData.player.life}, speed: {gameData.player.speed}, nbClassicBomb: {gameData.player.nbClassicBomb}, nbMine : {gameData.player.nbMine}, nbRemoteBomb: {gameData.player.nbRemoteBomb}, impactDist: {gameData.player.impactDist}, invincible: {gameData.player.invincible}");
+                            }
+                            else {
+                                Debug.LogError("Failed to deserialize JSON into MapList object.");
+                            }
+                        }
+                    }
+                }
+                OnGame();
+            }
+            else
+                Debug.LogError("NetworkStream is not initialized.");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Error sending message!" + e.Message);
+        }
     }
+
+
+
+    public NetworkStream GetNetworkStream() { return networkStream; }
 }
+
