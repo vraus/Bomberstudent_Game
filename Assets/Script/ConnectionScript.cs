@@ -17,6 +17,7 @@ public class ConnectionScript : MonoBehaviour
 
     private MapList mapList;
     private GameList gameList;
+    private GameData gameData;
 
     [SerializeField] Button connect;
 
@@ -150,9 +151,9 @@ public class ConnectionScript : MonoBehaviour
                         {
                             // Debug.Log(jsonResponse.ToString());
 
-
                             gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
                             if (gameList != null && gameList.games != null) {
+                                foreach (Transform child in pnlGamesList.transform) { GameObject.Destroy(child.gameObject); }
                                 foreach (Game game in gameList.games) {
                                     // Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
                                     GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
@@ -187,6 +188,7 @@ public class ConnectionScript : MonoBehaviour
         pnlJoin.SetActive(isJoin);
         if(isJoin)
         {
+            Debug.Log(isJoin);
             TextMeshProUGUI _gameName = pnlJoin.GetComponentInChildren<TextMeshProUGUI>();
             _gameName.text = gameName;
 
@@ -199,6 +201,7 @@ public class ConnectionScript : MonoBehaviour
         }
         else
         {
+            pnlCreate.SetActive(true);
             TMP_InputField nameInput = pnlCreate.GetComponentInChildren<TMP_InputField>();
             nameInput.text = "Game " + mapId.ToString();
 
@@ -243,28 +246,20 @@ public class ConnectionScript : MonoBehaviour
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
                             // Debug.Log(jsonResponse.ToString());
-
-                            gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
-                            if (gameList != null && gameList.games != null)
-                            {
-                                foreach (Game game in gameList.games)
-                                {
-                                    // Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
-                                    GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
-                                    TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
-                                    nameEntry.text = "Name: " + game.name;
-                                    TextMeshProUGUI nbPlayer = entry.transform.Find("EntryNbPlayers").GetComponent<TextMeshProUGUI>();
-                                    nbPlayer.text = game.nbPlayer + "/4";
-
-                                    Button button = entry.GetComponentInChildren<Button>();
-                                    button.GetComponentInChildren<TextMeshProUGUI>().GetComponent<TextMeshProUGUI>().text = "Join";
-                                    button.onClick.AddListener(() => OnButtonClick(true, game.name, game.mapId));
-                                }
-                            }
+                            gameData = JsonUtility.FromJson<GameData>(jsonResponse); // access the data in 'gameList' object
+                            OnGame();
+                            // ça fais des doublon aussi alors qu'il y a pas de foreach je comprends pas
+                            /*GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
+                            TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
+                            nameEntry.text = "Name: " + gameName;
+                            TextMeshProUGUI nbPlayer = entry.transform.Find("EntryNbPlayers").GetComponent<TextMeshProUGUI>();
+                            //nbPlayer.text = game.nbPlayer + "/4";
+                            Button button = entry.GetComponentInChildren<Button>();
+                            button.GetComponentInChildren<TextMeshProUGUI>().GetComponent<TextMeshProUGUI>().text = "Join";
+                            button.onClick.AddListener(() => OnButtonClick(true, gameName, mapId));*/
                         }
                     }
                 }
-                //OnGame();
             }
             else
                 Debug.LogError("NetworkStream is not initialized.");
