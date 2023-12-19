@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Networking.Types;
 
 public class ConnectionScript : MonoBehaviour
 {
@@ -49,7 +50,6 @@ public class ConnectionScript : MonoBehaviour
             tcpClient = new TcpClient("127.0.0.1", port);
             networkStream = tcpClient.GetStream();
 
-            Debug.Log("Connected to the server!");
             connect.gameObject.SetActive(false);
             pnlMapList.gameObject.SetActive(false);
             pnlGamesList.gameObject.SetActive(false);
@@ -89,12 +89,12 @@ public class ConnectionScript : MonoBehaviour
                         pnlMapList.gameObject.SetActive(true);
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
-                            Debug.Log(jsonResponse.ToString());
+                            // Debug.Log(jsonResponse.ToString());
 
                             mapList = JsonUtility.FromJson<MapList>(jsonResponse); // access the data in 'mapList' object
                             if (mapList != null && mapList.maps != null) {
                                 foreach (Map map in mapList.maps) {
-                                    Debug.Log($"Map ID: {map.id}, Width: {map.width}, Height: {map.height}, Content: {map.content}");
+                                    // Debug.Log($"Map ID: {map.id}, Width: {map.width}, Height: {map.height}, Content: {map.content}");
                                     GameObject entry = Instantiate(entryPrefab, pnlMapList.transform);
                                     TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
                                     nameEntry.text = "Id :" + map.id;
@@ -104,6 +104,7 @@ public class ConnectionScript : MonoBehaviour
                                     Button button = entry.GetComponentInChildren<Button>();
                                     button.GetComponentInChildren<TextMeshProUGUI>().GetComponent<TextMeshProUGUI>().text = "Create from map";
                                     button.onClick.AddListener(() => OnButtonClick(false, "", map.id));
+                                    Debug.Log("New entry created: map.id: " + map.id);
                                 }
                             }
                             else {
@@ -147,13 +148,13 @@ public class ConnectionScript : MonoBehaviour
                         reader = null;
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
-                            Debug.Log(jsonResponse.ToString());
+                            // Debug.Log(jsonResponse.ToString());
 
 
                             gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
                             if (gameList != null && gameList.games != null) {
                                 foreach (Game game in gameList.games) {
-                                    Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
+                                    // Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
                                     GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
                                     TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
                                     nameEntry.text = "Name: " + game.name;
@@ -186,6 +187,12 @@ public class ConnectionScript : MonoBehaviour
         pnlJoin.SetActive(isJoin);
         if(isJoin)
         {
+            TextMeshProUGUI _gameName = pnlJoin.GetComponentInChildren<TextMeshProUGUI>();
+            _gameName.text = gameName;
+
+            Button btnJoin = pnlJoin.GetComponentInChildren<Button>();
+            btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
+
             string gameCreateRequest = "POST game/join {\"name\":\"" + gameName + "\"}";
             byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
             networkStream.Write(data, 0, data.Length);
@@ -203,6 +210,13 @@ public class ConnectionScript : MonoBehaviour
         }
     }
     
+    public void OnButtonClickJoin(string gameName)
+    {
+        // Start la game
+        string gameCreateRequest = "POST game/start {\"name\":\"" + gameName + "\"}";
+        byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
+        networkStream.Write(data, 0, data.Length);
+    }
 
     public void OnButtonClickCreate(string gameName, int mapId)
     {
@@ -213,6 +227,8 @@ public class ConnectionScript : MonoBehaviour
                 string gameCreateRequest = "POST game/create {\"name\":\"" + gameName + "\", \"mapId\":" + mapId + "}";
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
                 networkStream.Write(data, 0, data.Length);
+
+                Debug.Log(gameCreateRequest);
 
                 System.Threading.Thread.Sleep(100); //sleep to wait the server answer
                 if (networkStream != null && networkStream.DataAvailable) {
@@ -226,14 +242,14 @@ public class ConnectionScript : MonoBehaviour
                         reader = null;
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
-                            Debug.Log(jsonResponse.ToString());
+                            // Debug.Log(jsonResponse.ToString());
 
                             gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
                             if (gameList != null && gameList.games != null)
                             {
                                 foreach (Game game in gameList.games)
                                 {
-                                    Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
+                                    // Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
                                     GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
                                     TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
                                     nameEntry.text = "Name: " + game.name;
