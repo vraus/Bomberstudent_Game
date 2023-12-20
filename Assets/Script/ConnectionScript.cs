@@ -8,6 +8,8 @@ using UnityEngine.Networking.Types;
 
 public class ConnectionScript : MonoBehaviour
 {
+    [HideInInspector] public ConnectionScript instance;
+
     private TcpClient tcpClient;
     private readonly int port = 42069;
 
@@ -21,9 +23,13 @@ public class ConnectionScript : MonoBehaviour
 
     [SerializeField] Button connect;
 
+    [Header("GameManagement")]
+    [SerializeField] GameManager gameManager;
+
 
     [Header("List Elements")]
     public GameObject entryPrefab;
+    [SerializeField] GameObject preGameCanvas;
     [SerializeField] GameObject pnlMapList;
     [SerializeField] GameObject pnlGamesList;
     [SerializeField] GameObject pnlJoin;
@@ -31,6 +37,8 @@ public class ConnectionScript : MonoBehaviour
 
 
     void Start() {
+        if (instance != null) instance = this;
+
         pnlMapList.gameObject.SetActive(false);
         pnlGamesList.gameObject.SetActive(false);
         pnlJoin.gameObject.SetActive(false);
@@ -57,7 +65,7 @@ public class ConnectionScript : MonoBehaviour
         return false;
     }
 
-    private void InstantJoin(string gameName)
+    private void InstantJoin(string gameName, int mapId)
     {
         pnlCreate.SetActive(false);
         pnlJoin.SetActive(true);
@@ -66,7 +74,7 @@ public class ConnectionScript : MonoBehaviour
         _gameName.text = gameName;
 
         Button btnJoin = pnlJoin.GetComponentInChildren<Button>();
-        btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
+        btnJoin.onClick.AddListener(() => OnButtonClickStart(gameName, mapId));
     }
 
     public void OnConnect()
@@ -207,7 +215,7 @@ public class ConnectionScript : MonoBehaviour
             _gameName.text = gameName;
 
             Button btnJoin = pnlJoin.GetComponentInChildren<Button>();
-            btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
+            btnJoin.onClick.AddListener(() => OnButtonClickStart(gameName, mapId));
 
             string gameCreateRequest = "POST game/join {\"name\":\"" + gameName + "\"}";
             byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
@@ -249,7 +257,7 @@ public class ConnectionScript : MonoBehaviour
                             // Debug.Log(jsonResponse.ToString());
                             gameData = JsonUtility.FromJson<GameData>(jsonResponse); // access the data in 'gameList' object
                             OnGame();
-                            InstantJoin(gameName);
+                            InstantJoin(gameName, mapId);
                         }
                     }
                 }
@@ -263,7 +271,7 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
-    public void OnButtonClickJoin(string gameName)
+    public void OnButtonClickStart(string gameName, int mapId)
     {
         // Start la game
         string gameCreateRequest = "POST game/start {\"name\":\"" + gameName + "\"}";
@@ -271,6 +279,11 @@ public class ConnectionScript : MonoBehaviour
         networkStream.Write(data, 0, data.Length);
 
         System.Threading.Thread.Sleep(100);
+
+        if (!networkStream.DataAvailable)
+        {
+            Debug.LogWarning("Don't wanna be here");
+        }
         if (networkStream != null && networkStream.DataAvailable)
         {
             reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
@@ -280,11 +293,19 @@ public class ConnectionScript : MonoBehaviour
                 while (reader.Peek() > -1) jsonResponse += reader.ReadLine() + '\n';
                 reader = null;
                 if (!string.IsNullOrEmpty(jsonResponse)) Debug.Log(jsonResponse.ToString());
+
+                preGameCanvas.SetActive(false);
+                gameManager.GameInitialization(mapId);
             }
+        }
+        else
+        {
+            Debug.LogError("networkStream is null or !networkStream.DataAvailable");
         }
     }
 
     public NetworkStream GetNetworkStream() { return networkStream; }
 
+    public MapList GetMapList() { return mapList; }
 }
 
