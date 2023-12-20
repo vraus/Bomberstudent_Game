@@ -105,7 +105,7 @@ public class ConnectionScript : MonoBehaviour
                                     Button button = entry.GetComponentInChildren<Button>();
                                     button.GetComponentInChildren<TextMeshProUGUI>().GetComponent<TextMeshProUGUI>().text = "Create from map";
                                     button.onClick.AddListener(() => OnButtonClick(false, "", map.id));
-                                    Debug.Log("New entry created: map.id: " + map.id);
+                                    //Debug.Log("New entry created: map.id: " + map.id);
                                 }
                             }
                             else {
@@ -152,10 +152,8 @@ public class ConnectionScript : MonoBehaviour
                             // Debug.Log(jsonResponse.ToString());
 
                             gameList = JsonUtility.FromJson<GameList>(jsonResponse); // access the data in 'gameList' object
-                            if (gameList != null && gameList.games != null) {
-                                foreach (Transform child in pnlGamesList.transform) { GameObject.Destroy(child.gameObject); }
-                                foreach (Game game in gameList.games) {
-                                    // Debug.Log($"name: {game.name}, Nb Player:{game.nbPlayer}, Map ID: {game.mapId}");
+                            foreach (Game game in gameList.games) {
+                                if (!GameExistsInList(game.name)) {
                                     GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
                                     TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
                                     nameEntry.text = "Name: " + game.name;
@@ -165,9 +163,6 @@ public class ConnectionScript : MonoBehaviour
                                     button.GetComponentInChildren<TextMeshProUGUI>().GetComponent<TextMeshProUGUI>().text = "Join";
                                     button.onClick.AddListener(() => OnButtonClick(true, game.name, game.mapId));
                                 }
-                            }
-                            else {
-                                Debug.LogError("Failed to deserialize JSON into MapList object.");
                             }
                         }
                     }
@@ -193,7 +188,7 @@ public class ConnectionScript : MonoBehaviour
             _gameName.text = gameName;
 
             Button btnJoin = pnlJoin.GetComponentInChildren<Button>();
-            btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
+            //btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
 
             string gameCreateRequest = "POST game/join {\"name\":\"" + gameName + "\"}";
             byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
@@ -212,13 +207,19 @@ public class ConnectionScript : MonoBehaviour
             btnCreate.onClick.AddListener(() => OnButtonClickCreate(nameInput.text, mapId));
         }
     }
-    
-    public void OnButtonClickJoin(string gameName)
+
+    private bool GameExistsInList(string gameName)
     {
-        // Start la game
-        string gameCreateRequest = "POST game/start {\"name\":\"" + gameName + "\"}";
-        byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
-        networkStream.Write(data, 0, data.Length);
+        // Check if an entry with the same name already exists in pnlGamesList
+        foreach (Transform child in pnlGamesList.transform)
+        {
+            TextMeshProUGUI nameEntry = child.Find("EntryName").GetComponent<TextMeshProUGUI>();
+            if (nameEntry.text.Equals("Name: " + gameName))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void OnButtonClickCreate(string gameName, int mapId)
@@ -248,15 +249,6 @@ public class ConnectionScript : MonoBehaviour
                             // Debug.Log(jsonResponse.ToString());
                             gameData = JsonUtility.FromJson<GameData>(jsonResponse); // access the data in 'gameList' object
                             OnGame();
-                            // ça fais des doublon aussi alors qu'il y a pas de foreach je comprends pas
-                            /*GameObject entry = Instantiate(entryPrefab, pnlGamesList.transform);
-                            TextMeshProUGUI nameEntry = entry.transform.Find("EntryName").GetComponent<TextMeshProUGUI>();
-                            nameEntry.text = "Name: " + gameName;
-                            TextMeshProUGUI nbPlayer = entry.transform.Find("EntryNbPlayers").GetComponent<TextMeshProUGUI>();
-                            //nbPlayer.text = game.nbPlayer + "/4";
-                            Button button = entry.GetComponentInChildren<Button>();
-                            button.GetComponentInChildren<TextMeshProUGUI>().GetComponent<TextMeshProUGUI>().text = "Join";
-                            button.onClick.AddListener(() => OnButtonClick(true, gameName, mapId));*/
                         }
                     }
                 }
@@ -270,6 +262,13 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
+    public void OnButtonClickJoin(string gameName)
+    {
+        // Start la game
+        string gameCreateRequest = "POST game/start {\"name\":\"" + gameName + "\"}";
+        byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
+        networkStream.Write(data, 0, data.Length);
+    }
 
 
     public NetworkStream GetNetworkStream() { return networkStream; }
