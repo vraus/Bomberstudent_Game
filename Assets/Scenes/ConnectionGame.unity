@@ -420,6 +420,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mapPrefab: {fileID: 3744572982189643053, guid: 22e96ac7e4fb62240b1ef9388a408057, type: 3}
   connectionScript: {fileID: 608327695}
+  unbreakableWallPrefab: {fileID: 1489480176882456029, guid: 80318da40f024044e804992719929100, type: 3}
+  breakableWallPrefab: {fileID: 4110898330845883958, guid: 9b61773e2b6d91141a0941822acb0aa2, type: 3}
+  target: {fileID: 1359541731646282276, guid: c38d22fa1ca5bf54081f65f86fd86c03, type: 3}
 --- !u!1 &2002475940
 GameObject:
   m_ObjectHideFlags: 0
