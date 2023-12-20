@@ -43,6 +43,31 @@ public class ConnectionScript : MonoBehaviour
         networkStream?.Close();
         tcpClient?.Close();
     }
+    private bool GameExistsInList(string gameName)
+    {
+        // Check if an entry with the same name already exists in pnlGamesList
+        foreach (Transform child in pnlGamesList.transform)
+        {
+            TextMeshProUGUI nameEntry = child.Find("EntryName").GetComponent<TextMeshProUGUI>();
+            if (nameEntry.text.Equals("Name: " + gameName))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void InstantJoin(string gameName)
+    {
+        pnlCreate.SetActive(false);
+        pnlJoin.SetActive(true);
+        
+        TextMeshProUGUI _gameName = pnlJoin.GetComponentInChildren<TextMeshProUGUI>();
+        _gameName.text = gameName;
+
+        Button btnJoin = pnlJoin.GetComponentInChildren<Button>();
+        btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
+    }
 
     public void OnConnect()
     {
@@ -65,7 +90,6 @@ public class ConnectionScript : MonoBehaviour
             Debug.LogError("Error connecting to the server!" + e.Message);
         }
     }
-
 
     public void OnMap() {
         try
@@ -124,7 +148,6 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
-
     public void OnGame() {
         try
         {
@@ -142,10 +165,7 @@ public class ConnectionScript : MonoBehaviour
                         jsonResponse = null;
                         pnlGamesList.gameObject.SetActive(true);
 
-                        while (reader.Peek() > -1)
-                        {
-                            jsonResponse += reader.ReadLine() + '\n';
-                        }
+                        while (reader.Peek() > -1) jsonResponse += reader.ReadLine() + '\n';
                         reader = null;
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
@@ -183,12 +203,11 @@ public class ConnectionScript : MonoBehaviour
         pnlJoin.SetActive(isJoin);
         if(isJoin)
         {
-            Debug.Log(isJoin);
             TextMeshProUGUI _gameName = pnlJoin.GetComponentInChildren<TextMeshProUGUI>();
             _gameName.text = gameName;
 
             Button btnJoin = pnlJoin.GetComponentInChildren<Button>();
-            //btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
+            btnJoin.onClick.AddListener(() => OnButtonClickJoin(gameName));
 
             string gameCreateRequest = "POST game/join {\"name\":\"" + gameName + "\"}";
             byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
@@ -208,53 +227,35 @@ public class ConnectionScript : MonoBehaviour
         }
     }
 
-    private bool GameExistsInList(string gameName)
-    {
-        // Check if an entry with the same name already exists in pnlGamesList
-        foreach (Transform child in pnlGamesList.transform)
-        {
-            TextMeshProUGUI nameEntry = child.Find("EntryName").GetComponent<TextMeshProUGUI>();
-            if (nameEntry.text.Equals("Name: " + gameName))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public void OnButtonClickCreate(string gameName, int mapId)
     {
         try
         {
-            if (networkStream != null)
+            if ((networkStream != null) && !GameExistsInList(gameName))
             {
                 string gameCreateRequest = "POST game/create {\"name\":\"" + gameName + "\", \"mapId\":" + mapId + "}";
                 byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
                 networkStream.Write(data, 0, data.Length);
-
-                Debug.Log(gameCreateRequest);
 
                 System.Threading.Thread.Sleep(100); //sleep to wait the server answer
                 if (networkStream != null && networkStream.DataAvailable) {
                     reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
                     if (reader != null) {
                         jsonResponse = null;
-                        while (reader.Peek() > -1)
-                        {
-                            jsonResponse += reader.ReadLine() + '\n';
-                        }
+                        while (reader.Peek() > -1) jsonResponse += reader.ReadLine() + '\n';
                         reader = null;
                         if (!string.IsNullOrEmpty(jsonResponse))
                         {
                             // Debug.Log(jsonResponse.ToString());
                             gameData = JsonUtility.FromJson<GameData>(jsonResponse); // access the data in 'gameList' object
                             OnGame();
+                            InstantJoin(gameName);
                         }
                     }
                 }
             }
             else
-                Debug.LogError("NetworkStream is not initialized.");
+                Debug.LogError("NetworkStream is not initialized or bad game name");
         }
         catch (Exception e)
         {
@@ -268,9 +269,22 @@ public class ConnectionScript : MonoBehaviour
         string gameCreateRequest = "POST game/start {\"name\":\"" + gameName + "\"}";
         byte[] data = System.Text.Encoding.UTF8.GetBytes(gameCreateRequest);
         networkStream.Write(data, 0, data.Length);
+
+        System.Threading.Thread.Sleep(100);
+        if (networkStream != null && networkStream.DataAvailable)
+        {
+            reader = new StreamReader(networkStream, System.Text.Encoding.UTF8);
+            if (reader != null)
+            {
+                jsonResponse = null;
+                while (reader.Peek() > -1) jsonResponse += reader.ReadLine() + '\n';
+                reader = null;
+                if (!string.IsNullOrEmpty(jsonResponse)) Debug.Log(jsonResponse.ToString());
+            }
+        }
     }
 
-
     public NetworkStream GetNetworkStream() { return networkStream; }
+
 }
 
